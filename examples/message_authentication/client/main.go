@@ -41,9 +41,13 @@ func main() {
 			log.Fatalf("failed to read from stdin: %s", input)
 		}
 
-		// FIXME: why does bufio.NewWriter(conn) not work?
-		// FIXME: catch and handle (n int, err error)
-		conn.Write([]byte(fmt.Sprintf("%s\n", input)))
+		writer := bufio.NewWriter(conn)
+		if _, err = writer.WriteString(input); err != nil {
+			log.Fatalf("failed to write to writer: %s", err)
+		}
+		if err = writer.Flush(); err != nil {
+			log.Fatalf("failed to flush writer: %s", err)
+		}
 
 		msg, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
@@ -51,6 +55,7 @@ func main() {
 				return
 			}
 		}
+
 		fmt.Print(msg)
 	}
 }

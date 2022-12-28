@@ -38,7 +38,11 @@ func Read(c net.Conn) func([]byte) (int, error) {
 
 		// compute hmac for message
 		computed := hmac.New(sha256.New, []byte(hmacKey))
-		computed.Write(msg) // TODO: catch error
+		if n, err = computed.Write(msg); err != nil {
+			// note: hash.Write() never returns an error as per godoc
+			// (https://pkg.go.dev/hash#Hash) but we check it regardless
+			return n, err
+		}
 		sum := computed.Sum(nil)
 
 		// compare received vs computed HMAC
@@ -59,11 +63,16 @@ func Read(c net.Conn) func([]byte) (int, error) {
 func Write(c net.Conn) func([]byte) (int, error) {
 	return func(b []byte) (int, error) {
 		// compute HMAC for message
-		mac := hmac.New(sha256.New, []byte(hmacKey))
-		mac.Write(b) // TODO: catch err
+		computed := hmac.New(sha256.New, []byte(hmacKey))
+		if n, err := computed.Write(b); err != nil {
+			// note: hash.Write() never returns an error as per godoc
+			// (https://pkg.go.dev/hash#Hash) but we check it regardless
+			return n, err
+		}
+		sum := computed.Sum(nil)
 
 		// put together data (${HMAC}${MSG})
-		data := append(mac.Sum(nil), b...)
+		data := append(sum, b...)
 
 		// write data to conn
 		n, err := c.Write(data)

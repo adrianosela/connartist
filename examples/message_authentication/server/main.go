@@ -23,6 +23,7 @@ var (
 func main() {
 	flag.StringVar(&protocol, "protocol", "tcp", "listener protocol to use")
 	flag.StringVar(&address, "address", "localhost:1234", "listener address (i.e. HOST:PORT) to use")
+	rand.Seed(time.Now().Unix())
 
 	l, err := net.Listen(protocol, address)
 	if err != nil {
@@ -56,8 +57,15 @@ func handleConn(clientID int, conn net.Conn) {
 
 		fmt.Printf("[%d] %s", clientID, data)
 
-		// FIXME: why does bufio.NewWriter(conn) not work?
-		// FIXME: catch and handle (n int, err error)
-		conn.Write([]byte(fmt.Sprintf("[%s] %s\n", time.Now().Format(time.RFC3339), data)))
+		writer := bufio.NewWriter(conn)
+		_, err = writer.WriteString(fmt.Sprintf("[%s] %s", time.Now().Format(time.RFC3339), data))
+		if err != nil {
+			log.Printf("failed to write to writer for client id %d: %s", clientID, err)
+			return
+		}
+		if err = writer.Flush(); err != nil {
+			log.Printf("failed to flush writer for client id %d: %s", clientID, err)
+			return
+		}
 	}
 }
